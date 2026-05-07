@@ -1,0 +1,50 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: varaltech_db
+    environment:
+      POSTGRES_USER: varaltech
+      POSTGRES_PASSWORD: varaltech123
+      POSTGRES_DB: varaltech
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U varaltech"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: varaltech_backend
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://varaltech:varaltech123@db:5432/varaltech
+      JWT_SECRET_KEY: varaltech-super-secret-jwt-key-change-in-production
+      FLASK_ENV: development
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    container_name: varaltech_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:5000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
