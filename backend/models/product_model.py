@@ -88,3 +88,47 @@ def delete_product(product_id):
         raise NotFoundError('Produto não encontrado.')
     p.active = False
     db.session.commit()
+
+
+def reactivate_product(product_id):
+    p = Product.query.get(product_id)
+    if not p:
+        raise NotFoundError('Produto não encontrado.')
+    p.active = True
+    db.session.commit()
+    return p.to_dict()
+
+
+def checkout_products(items):
+    """
+    items: list of { id, qty }
+    Decrements stock for each product.
+    Deactivates product if stock reaches 0.
+    Returns list of updated products.
+    Raises ValueError if any item has insufficient stock.
+    """
+    from errors import EmptyStringError
+
+    # Validate all items before touching the DB
+    products = []
+    for item in items:
+        p = Product.query.get(item['id'])
+        if not p or not p.active:
+            raise NotFoundError(f'Produto #{item["id"]} não encontrado ou inativo.')
+        if p.stock < item['qty']:
+            raise EmptyStringError(
+                f'Estoque insuficiente para "{p.name}". Disponível: {p.stock}.'
+            )
+        products.append((p, item['qty']))
+
+    # Apply changes
+    updated = []
+    for p, qty in products:
+        p.stock -= qty
+        if p.stock <= 0:
+            p.stock = 0
+            p.active = False
+        updated.append(p.to_dict())
+
+    db.session.commit()
+    return updated
