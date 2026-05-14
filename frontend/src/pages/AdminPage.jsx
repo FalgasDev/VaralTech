@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Users, Package, Shield, ShieldOff, Trash2, Plus, Edit2, X,
   TrendingUp, UserCheck, ShoppingBag, LayoutDashboard, LogOut,
-  AlertCircle, ChevronRight, Search
+  AlertCircle, ChevronRight, Search, RotateCcw
 } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuth } from '../context/AuthContext'
@@ -76,6 +76,14 @@ export default function AdminPage() {
       await api.deleteProduct(id)
       setProducts(prev => prev.map(p => p.id === id ? { ...p, active: false } : p))
       showToast('Produto desativado.')
+    } catch (e) { showToast(e.message, 'error') }
+  }
+
+  const handleReactivateProduct = async (id) => {
+    try {
+      const updated = await api.reactivateProduct(id)
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, active: true } : p))
+      showToast('Produto reativado com sucesso!')
     } catch (e) { showToast(e.message, 'error') }
   }
 
@@ -328,23 +336,33 @@ export default function AdminPage() {
                   <div style={{ position: 'relative', height: 160 }}>
                     <img src={p.image_url || 'https://via.placeholder.com/400'} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     {!p.active && (
-                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>INATIVO</span>
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+                        <span style={{ color: '#fff', fontWeight: 700, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase', background: 'rgba(231,76,60,0.8)', padding: '4px 12px', borderRadius: 999 }}>Inativo</span>
                       </div>
                     )}
                   </div>
                   <div style={{ padding: '16px' }}>
-                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: 'var(--navy)', marginBottom: 4 }}>{p.name}</p>
-                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: 'var(--blue)', marginBottom: 12 }}>{fmt(p.price)}</p>
+                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: p.active ? 'var(--navy)' : 'var(--gray-400)', marginBottom: 4 }}>{p.name}</p>
+                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: p.active ? 'var(--blue)' : 'var(--gray-400)', marginBottom: 12 }}>{fmt(p.price)}</p>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>Estoque: {p.stock}</span>
+                      <span style={{ fontSize: 12, color: p.stock === 0 ? 'var(--red)' : 'var(--gray-400)', fontWeight: p.stock === 0 ? 600 : 400 }}>
+                        {p.stock === 0 ? 'Sem estoque' : `Estoque: ${p.stock}`}
+                      </span>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <button onClick={() => setProductModal(p)} style={{ ...iconBtn, color: 'var(--blue)', borderColor: 'var(--blue-light)', background: 'var(--blue-light)' }}>
                           <Edit2 size={14} />
                         </button>
-                        {p.active && (
+                        {p.active ? (
                           <button onClick={() => handleDeleteProduct(p.id)} style={{ ...iconBtn, color: 'var(--red)', borderColor: 'rgba(231,76,60,0.2)', background: 'rgba(231,76,60,0.06)' }}>
                             <Trash2 size={14} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleReactivateProduct(p.id)}
+                            title="Reativar produto"
+                            style={{ ...iconBtn, color: 'var(--green)', borderColor: 'rgba(34,197,94,0.25)', background: 'rgba(34,197,94,0.08)' }}
+                          >
+                            <RotateCcw size={14} />
                           </button>
                         )}
                       </div>
