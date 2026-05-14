@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
-import { CreditCard, Lock, CheckCircle, ChevronRight, Barcode, QrCode, ArrowLeft, ShoppingBag } from 'lucide-react'
+import { api } from '../services/api'
+import { CreditCard, Lock, CheckCircle, ChevronRight, Barcode, QrCode, ArrowLeft, ShoppingBag, AlertCircle } from 'lucide-react'
 
 const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -18,6 +19,7 @@ export default function CheckoutPage() {
   const [method, setMethod] = useState('credit')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [checkoutError, setCheckoutError] = useState('')
 
   // Credit card fields
   const [card, setCard] = useState({ number: '', name: '', expiry: '', cvv: '' })
@@ -43,15 +45,23 @@ export default function CheckoutPage() {
     return Object.keys(e).length === 0
   }
 
-  const handlePay = () => {
+  const handlePay = async () => {
     if (items.length === 0) return
     if (!validate()) return
     setLoading(true)
-    setTimeout(() => {
+    setCheckoutError('')
+    try {
+      // Decrement stock on the backend
+      await api.checkout(items.map(i => ({ id: i.id, qty: i.qty })))
+      setTimeout(() => {
+        setDone(true)
+        clearCart()
+        setLoading(false)
+      }, 2200)
+    } catch (e) {
+      setCheckoutError(e.message || 'Erro ao processar o pedido. Tente novamente.')
       setLoading(false)
-      setDone(true)
-      clearCart()
-    }, 2200)
+    }
   }
 
   if (done) return <SuccessScreen navigate={navigate} />
@@ -311,6 +321,19 @@ export default function CheckoutPage() {
                 <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: 'var(--blue)' }}>{fmt(finalTotal)}</span>
               </div>
             </div>
+
+            {checkoutError && (
+              <div style={{
+                marginTop: 16,
+                display: 'flex', alignItems: 'flex-start', gap: 10,
+                padding: '12px 14px', borderRadius: 'var(--radius-sm)',
+                background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.25)',
+                color: 'var(--red)', fontSize: 13, fontWeight: 500, lineHeight: 1.5
+              }}>
+                <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+                {checkoutError}
+              </div>
+            )}
 
             <button
               onClick={handlePay}
