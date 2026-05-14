@@ -32,4 +32,7 @@ export const api = {
   createProduct: (data) => request('/admin/products', { method: 'POST', body: JSON.stringify(data) }),
   updateProduct: (id, data) => request(`/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteProduct: (id) => request(`/admin/products/${id}`, { method: 'DELETE' }),
+  reactivateProduct: (id) => request(`/admin/products/${id}/reactivate`, { method: 'POST' }),
+
+  checkout: (items) => request('/checkout', { method: 'POST', body: JSON.stringify({ items }) }),
 }
