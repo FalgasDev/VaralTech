@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models.product_model import get_all_products, get_product_by_id, create_product, update_product, delete_product
+from models.product_model import get_all_products, get_product_by_id, create_product, update_product, delete_product, reactivate_product, checkout_products
 from models.user_model import User
 from errors import NotFoundError, EmptyStringError
 
@@ -64,6 +64,36 @@ def remove_product(product_id):
         return jsonify({'status': 'Produto removido.'}), 200
     except NotFoundError as e:
         return jsonify({'error': e.message}), 404
+
+
+@product_blueprint.route('/admin/products/<int:product_id>/reactivate', methods=['POST'])
+@jwt_required()
+def restore_product(product_id):
+    user = get_current_user()
+    if not user or not user.is_admin:
+        return jsonify({'error': 'Acesso negado.'}), 403
+    try:
+        p = reactivate_product(product_id)
+        return jsonify(p), 200
+    except NotFoundError as e:
+        return jsonify({'error': e.message}), 404
+
+
+@product_blueprint.route('/checkout', methods=['POST'])
+def do_checkout():
+    """
+    Body: { items: [{ id, qty }, ...] }
+    Decrements stock. No auth required (guest checkout allowed).
+    """
+    data = request.json or {}
+    items = data.get('items', [])
+    if not items:
+        return jsonify({'error': 'Nenhum item no pedido.'}), 400
+    try:
+        updated = checkout_products(items)
+        return jsonify({'status': 'Pedido confirmado.', 'updated_products': updated}), 200
+    except (NotFoundError, EmptyStringError) as e:
+        return jsonify({'error': e.message}), 400
 
 
 @product_blueprint.route('/admin/products', methods=['GET'])
